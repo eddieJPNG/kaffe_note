@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kaffe Note">
+  <rect width="512" height="512" fill="#000000"/>
+  <rect x="120" y="112" width="16" height="288" rx="8" fill="#ffffff"/>
+  <rect x="168" y="112" width="224" height="16" rx="8" fill="#ffffff"/>
+  <rect x="168" y="168" width="224" height="16" rx="8" fill="#ffffff"/>
+  <rect x="168" y="224" width="224" height="16" rx="8" fill="#ffffff"/>
+  <rect x="168" y="280" width="140" height="16" rx="8" fill="#ffffff"/>
+  <rect x="168" y="336" width="80" height="16" rx="8" fill="#ffffff"/>
+</svg>
