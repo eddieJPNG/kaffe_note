@@ -1,0 +1,15 @@
+# Dependabot: alertas e PRs semanais para dependências e para as actions
+# do GitHub (S2 da auditoria de segurança — KAF-04).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

@@ -6,7 +6,7 @@
  */
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "out");
@@ -51,10 +51,18 @@ const MIME = {
 };
 
 async function resolveFile(urlPath) {
-  let pathname = decodeURIComponent(urlPath.split("?")[0]);
+  let pathname;
+  try {
+    pathname = decodeURIComponent(urlPath.split("?")[0]);
+  } catch {
+    // URI malformada (% não seguido de hex): 404 em vez de derrubar o server.
+    return null;
+  }
   if (pathname.endsWith("/")) pathname += "index.html";
   const candidate = normalize(join(root, pathname));
-  if (!candidate.startsWith(root)) return null;
+  // Igualdade ou prefixo COM separador: bloqueia diretórios irmãos
+  // cujo nome começa com "out" (ex.: ../out2/arquivo) — KAF-03.
+  if (candidate !== root && !candidate.startsWith(root + sep)) return null;
   try {
     const info = await stat(candidate);
     if (info.isDirectory()) {
@@ -86,6 +94,7 @@ createServer(async (req, res) => {
     ...headersFor(rawPath),
   });
   res.end(body);
-}).listen(port, () => {
-  console.log(`preview: http://localhost:${port}`);
+}).listen(port, "127.0.0.1", () => {
+  // Bind explícito em loopback: o preview NÃO fica exposto na LAN (KAF-03).
+  console.log(`preview: http://127.0.0.1:${port}`);
 });

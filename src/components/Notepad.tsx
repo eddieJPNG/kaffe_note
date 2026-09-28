@@ -393,6 +393,32 @@ export default function Notepad() {
     };
   }, []);
 
+  /**
+   * Solicita armazenamento persistente (S2 da auditoria — KAF-05): sem
+   * persist(), o navegador pode evacuar o IndexedDB sob pressão de espaço,
+   * violando a promessa de durabilidade do app. Melhor esforço: navegadores
+   * podem negar (ex.: perfil novo) — não é erro.
+   */
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.storage?.persist) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const already = navigator.storage.persisted
+          ? await navigator.storage.persisted()
+          : false;
+        if (!cancelled && !already) {
+          await navigator.storage.persist();
+        }
+      } catch {
+        // Negação/falha é silenciosa (sem log de conteúdo).
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /** Alerta proativo de proximidade da cota (Sprint 5). */
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.storage?.estimate) return;
