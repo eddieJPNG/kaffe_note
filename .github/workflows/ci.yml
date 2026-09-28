@@ -22,8 +22,11 @@ jobs:
       - name: Typecheck (TypeScript strict)
         run: npm run typecheck
 
-      - name: Build (static export)
+      - name: Build (static export + injeção da CSP)
         run: npm run build
+
+      - name: Security gate (cabeçalhos + CSP)
+        run: node scripts/verify-headers.mjs
 
       - name: Upload static artifact
         uses: actions/upload-artifact@v4

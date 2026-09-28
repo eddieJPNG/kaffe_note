@@ -1,5 +1,7 @@
 /**
  * Servidor estático mínimo para testar o build em ./out localmente.
+ * Reproduz os cabeçalhos de segurança declarados no vercel.json (S1 da
+ * auditoria) para que os testes locais reflitam o comportamento da Vercel.
  * Uso: npm run preview (porta 4173 por padrão)
  */
 import { createServer } from "node:http";
@@ -9,6 +11,31 @@ import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "out");
 const port = Number(process.env.PORT ?? 4173);
+
+/** Headers do vercel.json compilados em regex (source é estilo path-to-regexp). */
+const securityHeaders = [];
+try {
+  const vercel = JSON.parse(
+    await readFile(join(root, "..", "vercel.json"), "utf8"),
+  );
+  for (const entry of vercel.headers ?? []) {
+    const pattern = new RegExp(entry.source);
+    const headers = Object.fromEntries(
+      (entry.headers ?? []).map((item) => [item.key.toLowerCase(), item.value]),
+    );
+    securityHeaders.push({ pattern, headers });
+  }
+} catch {
+  // sem vercel.json: preview serve só content-type/cache
+}
+
+function headersFor(pathname) {
+  const merged = {};
+  for (const entry of securityHeaders) {
+    if (entry.pattern.test(pathname)) Object.assign(merged, entry.headers);
+  }
+  return merged;
+}
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -53,7 +80,11 @@ createServer(async (req, res) => {
   const rawPath = req.url?.split("?")[0] ?? "/index.html";
   const ext = extname(rawPath === "/" ? "index.html" : rawPath) || ".html";
   const type = MIME[ext] ?? "application/octet-stream";
-  res.writeHead(200, { "content-type": type, "cache-control": "no-cache" });
+  res.writeHead(200, {
+    "content-type": type,
+    "cache-control": "no-cache",
+    ...headersFor(rawPath),
+  });
   res.end(body);
 }).listen(port, () => {
   console.log(`preview: http://localhost:${port}`);
