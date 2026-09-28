@@ -260,7 +260,7 @@ que os listeners de janela/navegador sempre leiam o valor atual sem *stale closu
 | Imagens | `images.unoptimized` (nenhuma imagem é usada no fluxo) |
 | Script local | `npm run preview` — servidor estático mínimo na porta 4173 |
 | Deploy | **Vercel** (plataforma oficial; `vercel.json` define build, saída `out/` e cabeçalhos de segurança) |
-| CI | GitHub Actions: typecheck + build a cada push/PR |
+| CI | GitHub Actions: audit de dependências + typecheck + build + gate de segurança a cada push/PR |
 | Ambientes | Sem variáveis de escopo servidor; build é idêntico em qualquer ambiente |
 
 ### 6.1 Plataforma de deploy: Vercel (decisão da auditoria S0)
@@ -313,6 +313,23 @@ e apaga os caches da versão anterior — nunca ficam dois shards de cache ativo
   conteúdo do usuário executar marcadores.
 - Export estático: sem execução server-side, sem rotas de API para proteger.
 
+### Controles de segurança implementados (auditoria — sprints S0–S4)
+
+| Controle | Implementação | Achado |
+|----------|--------------|--------|
+| CSP estrita com hashes sha256 (sem `unsafe-inline` em scripts) | `scripts/inject-csp.mjs` no pós-build; `frame-ancestors` no `vercel.json` | KAF-01 |
+| Headers: framing, nosniff, referrer, permissions, HSTS | `vercel.json` (reproduzidos pelo preview local) | KAF-02 |
+| Preview só em `127.0.0.1`, anti-traversal com separador, URI malformada → 404 | `scripts/preview.mjs` | KAF-03 |
+| Actions por SHA, `npm audit` no CI, Dependabot, `engines` | `.github/workflows/ci.yml`, `.github/dependabot.yml` | KAF-04 |
+| `navigator.storage.persist()` no mount | `Notepad.tsx` | KAF-05 |
+| Validação de schema das mensagens do BroadcastChannel | `Notepad.tsx` (`isTabMessage`) | KAF-06 |
+| `updateViaCache: "none"` + `update()` no foco da aba | `ServiceWorkerRegister.tsx` | KAF-09 |
+| Gate de CI que falha se header/CSP regredirem | `scripts/verify-headers.mjs` | — |
+
+Decisões documentadas: texto em claro em repouso (KAF-07, §7 acima) e
+licenças de dependências de build (KAF-08, README). Relatório completo em
+`docs/SECURITY_AUDIT.md`.
+
 ---
 
 ## 8. Critérios de Aceite e Testes
@@ -345,7 +362,16 @@ Suíte headless com Playwright/Firefox cobrindo:
 | 5 | Aba B restaura conteúdo consistente após reload | ✅ |
 | 2/5 | Texto final sobrevive ao reload | ✅ |
 
-Além disso: typecheck TypeScript estrito (`tsc --noEmit`) e `next build` limpos.
+**Suíte de segurança (auditoria —20 verificações, reexecutada em 27/09/2026):**
+headers servidos, meta CSP com hashes e sem `unsafe-inline`, app funcional
+sob CSP com **0 violações**, atributo `style` aplicado, persistência sob CSP,
+SW `activated` sob CSP, `updateViaCache: "none"`, `storage.persist()`
+solicitado, payload malformado do BroadcastChannel rejeitado, iframe externo
+bloqueado. Total executado: **48 verificações, todas verdes** (24 aceitação +
+4 offline/multi-aba + 20 segurança).
+
+Além disso: typecheck TypeScript estrito (`tsc --noEmit`) e `next build` limpos,
+mais o gate `npm run verify:headers` (14 checagens de header/CSP).
 
 ### 8.2 Testes manuais obrigatórios (aceitação humana)
 
@@ -390,13 +416,16 @@ Estes exigem intervenção física e ficam como checklist de entrega:
 | Sprint 3 | Atalhos, Ctrl+S com feedback, limpeza com confirmação | Experiência de escrita completa |
 | Sprint 4 | Manifesto PWA, Service Worker, Cache API, offline | PWA funcional offline |
 | Sprint 5 | Cota, múltiplas abas, foco, testes, SDD, deploy | Entrega final |
+| S0–S4 | Auditoria de segurança e correções (CSP, headers, supply chain, durabilidade, SW) | Aplicação endurecida, verificada por gate de CI e 20 testes |
 
 ### 9.2 Entregáveis da entrega final
 
 - Código-fonte completo (TypeScript estrito, sem dívida de tipos)
 - Este documento (SDD) com as decisões reais do desenvolvimento
 - `README.md` com instruções de build, preview e deploy
-- Pipeline de CI (GitHub Actions: typecheck + build)
+- `docs/SECURITY_AUDIT.md` com a auditoria, achados e status das correções
+- `vercel.json` com build e cabeçalhos de segurança (deploy oficial na Vercel)
+- Pipeline de CI (GitHub Actions: audit + typecheck + build + gate de segurança)
 - Suíte de testes de aceitação automatizados
 
 ### 9.3 Melhorias futuras (priorização sugerida)
