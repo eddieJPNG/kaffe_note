@@ -79,6 +79,25 @@ function makeTabId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Valida o shape da mensagem em runtime (S3 da auditoria — KAF-06).
+ * Os tipos do TypeScript são apagados na compilação: sem esta checagem,
+ * qualquer script da mesma origem poderia publicar um payload malformado
+ * (ex.: `text` não-string) e corromper o estado exibido.
+ */
+function isTabMessage(value: unknown): value is TabMessage {
+  if (typeof value !== "object" || value === null) return false;
+  const msg = value as Record<string, unknown>;
+  if (typeof msg.sender !== "string") return false;
+  if (msg.type === "saved") {
+    return (
+      typeof msg.text === "string" && typeof msg.updatedAt === "number"
+    );
+  }
+  if (msg.type === "cleared") return true;
+  return false;
+}
+
 export default function Notepad() {
   const [text, setText] = useState("");
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
@@ -372,9 +391,11 @@ export default function Notepad() {
     if (typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(CHANNEL_NAME);
     channelRef.current = channel;
-    channel.onmessage = (event: MessageEvent<TabMessage>) => {
+    channel.onmessage = (event: MessageEvent) => {
       const message = event.data;
-      if (!message || message.sender === tabIdRef.current) return;
+      // Mensagens malformadas são descartadas antes de tocar no estado.
+      if (!isTabMessage(message)) return;
+      if (message.sender === tabIdRef.current) return;
       if (message.type === "saved") {
         if (!dirtyRef.current) {
           textRef.current = message.text;
