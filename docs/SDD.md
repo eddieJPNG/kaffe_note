@@ -259,9 +259,24 @@ que os listeners de janela/navegador sempre leiam o valor atual sem *stale closu
 | URLs | `trailingSlash` para compatibilidade com hosts estáticos |
 | Imagens | `images.unoptimized` (nenhuma imagem é usada no fluxo) |
 | Script local | `npm run preview` — servidor estático mínimo na porta 4173 |
-| Deploy | Qualquer host estático: Vercel, Netlify, nginx, GitHub Pages |
+| Deploy | **Vercel** (plataforma oficial; `vercel.json` define build, saída `out/` e cabeçalhos de segurança) |
 | CI | GitHub Actions: typecheck + build a cada push/PR |
 | Ambientes | Sem variáveis de escopo servidor; build é idêntico em qualquer ambiente |
+
+### 6.1 Plataforma de deploy: Vercel (decisão da auditoria S0)
+
+- **Justificativa:** GitHub Pages foi descartado — não permite cabeçalhos
+  customizados, o que inviabilizaria CSP e proteção contra framing (achados
+  KAF-01/KAF-02). A Vercel permite `headers` via `vercel.json`, força HTTPS em
+  todo domínio (inclusive previews de PR, habilitando HSTS) e se integra ao
+  repositório GitHub já existente.
+- **Fluxo dos hashes da CSP:** o `next build` gera scripts inline no HTML e
+  seus hashes sha256 mudam a cada build — nunca são fixados manualmente.
+  Um passo pós-build (`scripts/inject-csp.mjs`, acoplado ao `npm run build`)
+  lê o HTML exportado, calcula os hashes e injeta uma `<meta>` CSP no `<head>`.
+  A diretiva `frame-ancestors` (ignorada em meta) fica no header do
+  `vercel.json`. O navegador aplica as duas políticas em conjunto (interseção),
+  cobrindo todos os vetores.
 
 **Fluxo de versão do Service Worker:** alterações em shell, rotas ou estratégia exigem
 incrementar `CACHE_VERSION` em `public/sw.js`. O SW novo assume o controle na ativação

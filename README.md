@@ -44,18 +44,26 @@ npm run typecheck  # TypeScript estrito sem emitir
 | `Ctrl/Cmd + S` | Forçar salvamento com feedback |
 | `Ctrl/Cmd + Shift + Delete` | Limpar todo o conteúdo (com confirmação) |
 
-## Deploy
+## Deploy (Vercel)
 
-O build é 100% estático (`output: export`, saída em `./out`). Funciona em
-qualquer host estático:
+O build é 100% estático (`output: export`, saída em `./out`). A plataforma
+oficial é a **Vercel**: o `vercel.json` na raiz já define o build
+(`npm run build`), o diretório de saída (`out/`) e os cabeçalhos de segurança
+(CSP, anti-framing, `nosniff`, HSTS). Publicar = importar o repositório na
+Vercel (site ou CLI `vercel`) — nenhuma configuração extra.
 
-- **Vercel / Netlify:** detectam o Next.js automaticamente; build `npm run build`,
-  publicação do diretório `out`
-- **nginx / GitHub Pages / qualquer CDN:** copie o conteúdo de `out/`
+O HTTPS é automático e obrigatório em todo domínio (inclusive os previews de
+PR), o que habilita o HSTS.
 
 > **Service Worker:** ao fazer deploy de mudanças no shell ou na estratégia de
 > cache, incremente `CACHE_VERSION` em `public/sw.js` para invalidar os caches
 > antigos.
+
+> **Outros hosts:** copiar o conteúdo de `out/` continua funcionando em
+> qualquer host estático, mas os cabeçalhos definidos no `vercel.json`
+> precisam ser recriados na configuração do host escolhido. **GitHub Pages não
+> é compatível** com o app em produção: não permite cabeçalhos customizados,
+> o que eliminaria a CSP e a proteção contra framing.
 
 ## Estrutura
 
