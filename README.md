@@ -4,6 +4,13 @@
 [![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.9.0-green.svg)](package.json)
 
+<img src="assets/kaffe.jpeg" alt="kaffe">
+<br>
+<br>
+<p align="center">
+  <img src="assets/icon.png" alt="icon" width="200" height="200">
+</p>
+
 Notepad minimalista 100% client-side com persistência local duradoura.
 
 Tela preta, texto branco, sem chrome: abra e escreva. O texto sobrevive a
